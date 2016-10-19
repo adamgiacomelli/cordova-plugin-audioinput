@@ -40,8 +40,8 @@ audioinput.AUDIOSOURCE_TYPE = {
 
 // Default values
 audioinput.DEFAULT = {
-    SAMPLERATE: audioinput.SAMPLERATE.CD_AUDIO_44100Hz,
-    BUFFER_SIZE: 16384,
+    SAMPLERATE: audioinput.SAMPLERATE.VOIP_16000Hz,
+    BUFFER_SIZE: 960,
     CHANNELS: audioinput.CHANNELS.MONO,
     FORMAT: audioinput.FORMAT.PCM_16BIT,
     NORMALIZE: true,
@@ -67,7 +67,7 @@ audioinput.DEFAULT = {
  *  concatenateMaxChunks (How many packets will be merged each time, low = low latency but can require more resources)
  *  audioSourceType (Use audioinput.AUDIOSOURCE_TYPE.)
  */
-audioinput.start = function (cfg) {
+audioinput.start = function(cfg) {
     if (!audioinput._capturing) {
 
         if (!cfg) {
@@ -88,11 +88,10 @@ audioinput.start = function (cfg) {
 
         if (audioinput._cfg.channels < 1 && audioinput._cfg.channels > 2) {
             throw "Invalid number of channels (" + audioinput._cfg.channels + "). Only mono (1) and stereo (2) is" +
-            " supported.";
-        }
-        else if (audioinput._cfg.format != "PCM_16BIT" && audioinput._cfg.format != "PCM_8BIT") {
+                " supported.";
+        } else if (audioinput._cfg.format != "PCM_16BIT" && audioinput._cfg.format != "PCM_8BIT") {
             throw "Invalid format (" + audioinput._cfg.format + "). Only 'PCM_8BIT' and 'PCM_16BIT' is" +
-            " supported.";
+                " supported.";
         }
 
         if (audioinput._cfg.bufferSize <= 0) {
@@ -103,12 +102,12 @@ audioinput.start = function (cfg) {
             throw "Invalid concatenateMaxChunks (" + audioinput._cfg.concatenateMaxChunks + "). Must be greater than zero.";
         }
 
-        exec(audioinput._audioInputEvent, audioinput._audioInputErrorEvent, "AudioInputCapture", "start",
-            [audioinput._cfg.sampleRate,
-             audioinput._cfg.bufferSize,
-             audioinput._cfg.channels,
-             audioinput._cfg.format,
-             audioinput._cfg.audioSourceType]);
+        exec(audioinput._audioInputEvent, audioinput._audioInputErrorEvent, "AudioInputCapture", "start", [audioinput._cfg.sampleRate,
+            audioinput._cfg.bufferSize,
+            audioinput._cfg.channels,
+            audioinput._cfg.format,
+            audioinput._cfg.audioSourceType
+        ]);
 
         audioinput._capturing = true;
 
@@ -116,13 +115,11 @@ audioinput.start = function (cfg) {
             if (audioinput._initWebAudio(audioinput._cfg.audioContext)) {
                 audioinput._audioDataQueue = [];
                 audioinput._getNextToPlay();
-            }
-            else {
+            } else {
                 throw "The Web Audio API is not supported on this platform!";
             }
         }
-    }
-    else {
+    } else {
         throw "Already capturing!";
     }
 };
@@ -131,7 +128,7 @@ audioinput.start = function (cfg) {
 /**
  * Stop capturing audio
  */
-audioinput.stop = function () {
+audioinput.stop = function() {
     if (audioinput._capturing) {
         exec(null, audioinput._audioInputErrorEvent, "AudioInputCapture", "stop", []);
         audioinput._capturing = false;
@@ -151,7 +148,7 @@ audioinput.stop = function () {
  *
  * @param audioNode
  */
-audioinput.connect = function (audioNode) {
+audioinput.connect = function(audioNode) {
     if (audioinput._micGainNode) {
         audioinput.disconnect();
         audioinput._micGainNode.connect(audioNode);
@@ -161,7 +158,7 @@ audioinput.connect = function (audioNode) {
 /**
  * Disconnect the audio node
  */
-audioinput.disconnect = function () {
+audioinput.disconnect = function() {
     if (audioinput._micGainNode) {
         audioinput._micGainNode.disconnect();
     }
@@ -172,7 +169,7 @@ audioinput.disconnect = function () {
  *
  * @returns {*}
  */
-audioinput.getAudioContext = function () {
+audioinput.getAudioContext = function() {
     return audioinput._audioContext;
 };
 
@@ -180,7 +177,7 @@ audioinput.getAudioContext = function () {
  *
  * @returns {*}
  */
-audioinput.getCfg = function () {
+audioinput.getCfg = function() {
     return audioinput._cfg;
 };
 
@@ -188,7 +185,7 @@ audioinput.getCfg = function () {
  *
  * @returns {boolean|Array}
  */
-audioinput.isCapturing = function () {
+audioinput.isCapturing = function() {
     return audioinput._capturing;
 };
 
@@ -209,7 +206,7 @@ audioinput._webAudioAPISupported = false;
  *
  * @param {Object} audioInputData     keys: data (PCM)
  */
-audioinput._audioInputEvent = function (audioInputData) {
+audioinput._audioInputEvent = function(audioInputData) {
     try {
         if (audioInputData && audioInputData.data && audioInputData.data.length > 0) {
             var audioData = JSON.parse(audioInputData.data);
@@ -217,16 +214,15 @@ audioinput._audioInputEvent = function (audioInputData) {
 
             if (audioinput._cfg.streamToWebAudio && audioinput._capturing) {
                 audioinput._enqueueAudioData(audioData);
+            } else {
+                cordova.fireWindowEvent("audioinput", {
+                    data: audioData
+                });
             }
-            else {
-                cordova.fireWindowEvent("audioinput", {data: audioData});
-            }
-        }
-        else if (audioInputData && audioInputData.error) {
+        } else if (audioInputData && audioInputData.error) {
             audioinput._audioInputErrorEvent(audioInputData.error);
         }
-    }
-    catch (ex) {
+    } catch (ex) {
         audioinput._audioInputErrorEvent("audioinput._audioInputEvent ex: " + ex);
     }
 };
@@ -236,8 +232,10 @@ audioinput._audioInputEvent = function (audioInputData) {
  * @private
  */
 
-audioinput._audioInputErrorEvent = function (e) {
-    cordova.fireWindowEvent("audioinputerror", {message: e});
+audioinput._audioInputErrorEvent = function(e) {
+    cordova.fireWindowEvent("audioinputerror", {
+        message: e
+    });
 };
 
 /**
@@ -246,7 +244,7 @@ audioinput._audioInputErrorEvent = function (e) {
  * @param {Object} pcmData
  * @private
  */
-audioinput._normalizeAudio = function (pcmData) {
+audioinput._normalizeAudio = function(pcmData) {
 
     if (audioinput._cfg.normalize) {
         for (var i = 0; i < pcmData.length; i++) {
@@ -267,7 +265,7 @@ audioinput._normalizeAudio = function (pcmData) {
  * Consumes data from the audioinput queue
  * @private
  */
-audioinput._getNextToPlay = function () {
+audioinput._getNextToPlay = function() {
     try {
         var duration = 100;
 
@@ -286,8 +284,7 @@ audioinput._getNextToPlay = function () {
         if (audioinput._capturing) {
             audioinput._timerGetNextAudio = setTimeout(audioinput._getNextToPlay, duration);
         }
-    }
-    catch (ex) {
+    } catch (ex) {
         audioinput._audioInputErrorEvent("audioinput._getNextToPlay ex: " + ex);
     }
 };
@@ -299,7 +296,7 @@ audioinput._getNextToPlay = function () {
  * @returns {Number}
  * @private
  */
-audioinput._playAudio = function (data) {
+audioinput._playAudio = function(data) {
     try {
         if (data && data.length > 0) {
             var audioBuffer = audioinput._audioContext.createBuffer(audioinput._cfg.channels, (data.length / audioinput._cfg.channels), audioinput._cfg.sampleRate),
@@ -315,8 +312,7 @@ audioinput._playAudio = function (data) {
 
                     audioBuffer.getChannelData(i).set(new Float32Array(chdata));
                 }
-            }
-            else {
+            } else {
                 audioBuffer.getChannelData(0).set(data);
             }
 
@@ -327,8 +323,7 @@ audioinput._playAudio = function (data) {
 
             return audioBuffer.duration;
         }
-    }
-    catch (ex) {
+    } catch (ex) {
         audioinput._audioInputErrorEvent("audioinput._playAudio ex: " + ex);
     }
 
@@ -340,12 +335,11 @@ audioinput._playAudio = function (data) {
  * Creates the Web Audio Context and audio nodes for output.
  * @private
  */
-audioinput._initWebAudio = function (audioCtxFromCfg) {
+audioinput._initWebAudio = function(audioCtxFromCfg) {
     try {
         if (audioCtxFromCfg) {
             audioinput._audioContext = audioCtxFromCfg;
-        }
-        else if (!audioinput._audioContext) {
+        } else if (!audioinput._audioContext) {
             window.AudioContext = window.AudioContext || window.webkitAudioContext;
             audioinput._audioContext = new window.AudioContext();
             audioinput._webAudioAPISupported = true;
@@ -357,8 +351,7 @@ audioinput._initWebAudio = function (audioCtxFromCfg) {
         }
 
         return true;
-    }
-    catch (e) {
+    } catch (e) {
         audioinput._webAudioAPISupported = false;
         return false;
     }
@@ -370,7 +363,7 @@ audioinput._initWebAudio = function (audioCtxFromCfg) {
  * @returns {*}
  * @private
  */
-audioinput._enqueueAudioData = function (data) {
+audioinput._enqueueAudioData = function(data) {
     audioinput._audioDataQueue.push(data);
 };
 
@@ -380,7 +373,7 @@ audioinput._enqueueAudioData = function (data) {
  * @returns {*}
  * @private
  */
-audioinput._dequeueAudioData = function () {
+audioinput._dequeueAudioData = function() {
     return audioinput._audioDataQueue.shift();
 };
 

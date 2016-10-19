@@ -79,6 +79,8 @@ public class AudioInputReceiver extends Thread {
     public void run() {
         int numReadBytes = 0;
         short audioBuffer[] = new short[readBufferSize];
+        short enc_audioBuffer[] = new short[readBufferSize];
+        short dec_audioBuffer[] = new short[readBufferSize];
 
         synchronized(this) {
             recorder.startRecording();
@@ -88,7 +90,12 @@ public class AudioInputReceiver extends Thread {
 
                 if (numReadBytes > 0) {
                     try {
-                        String decoded = Arrays.toString(audioBuffer);
+                        //Encode audio
+                        int enc_len = OpusJni.opusEncode(audioBuffer, 0, numReadBytes, enc_audioBuffer, 0);
+                        //Decode encoded audio
+                        int dec_len = OpusJni.opusDecode(enc_audioBuffer, 0, enc_len, dec_audioBuffer, 0, 0);
+                        //Forward the processed audio
+                        String decoded = Arrays.toString(dec_audioBuffer);
 
                         message = handler.obtainMessage();
                         messageBundle.putString("data", decoded);

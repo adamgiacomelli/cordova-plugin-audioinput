@@ -33,6 +33,9 @@
 
         <source-file src="src/android/AudioInputCapture.java" target-dir="src/com/exelerus/cordova/audioinputcapture" />
         <source-file src="src/android/AudioInputReceiver.java" target-dir="src/com/exelerus/cordova/audioinputcapture" />
+        <source-file src="src/android/OpusJni.java" target-dir="src/gotoky/plugin/soundprocess/" />
+        <source-file src="src/android/libs/armeabi/libopus.so" target-dir="libs/armeabi/" />
+        <source-file src="src/android/libs/armeabi/libopus-jni.so" target-dir="libs/armeabi/" />
 
     </platform>
 
