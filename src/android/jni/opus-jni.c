@@ -84,7 +84,7 @@ jint Java_com_exelerus_cordova_audioinputcapture_OpusJni_opusDecode(JNIEnv *env,
    } else {
      (*env)->SetShortArrayRegion(env, joutputBuffer, 0, frame_size, (jshort *)outputBuffer);
    }
-
+   free(outputBuffer);
    return frame_size;
 }
 
@@ -107,6 +107,7 @@ jint Java_com_exelerus_cordova_audioinputcapture_OpusJni_opusEncode(JNIEnv *env,
      } else {
        (*env)->SetShortArrayRegion(env, jencoded, 0, len, (jshort *)outpacket);
      }
+     free(outpacket);
     return len;
 }
 
